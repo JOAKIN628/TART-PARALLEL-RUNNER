@@ -78,13 +78,8 @@ if __name__ == "__main__":
 
         start_time = f"{date_part}T{time_part}:00+00:00"
 
-        #run(f"apptainer run ../tart-tools.sif tart_get_archive_data --target tart-kenya --name {file_name} --start {start_time} --duration {duration}")
-        #run(f"apptainer run ../tart-tools.sif tart_get_archive_data --target ghana --name {file_name} --start {start_time} --duration {duration}")
-
-        #run(f"apptainer run ../tart-tools.sif tart_get_archive_data --target tart-mu-udm --name {file_name} --start {start_time} --duration {duration}")
-        #run(f"apptainer run ../tart-tools.sif tart_get_archive_data --target za-rhodes --name {file_name} --start {start_time} --duration {duration}")
-        run(f"apptainer run ../tart-tools.sif tart_get_archive_data --target botswana --name {file_name} --start {start_time} --duration {duration}")
-       
+        run(f"apptainer run ../tart-tools.sif tart_get_archive_data --target tart-kenya --name {file_name} --start {start_time} --duration {duration}")
+        
 
 
     else:
