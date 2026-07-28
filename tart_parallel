@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+import subprocess
+import os
+import glob
+import shutil
+from concurrent.futures import ProcessPoolExecutor, as_completed
+
+# -----------------------------
+# Helper function to run shell commands
+# -----------------------------
+def run(cmd):
+    subprocess.run(cmd, shell=True, check=True)
+
+# -----------------------------
+# PROCESSING FUNCTION (runs in parallel)
+# -----------------------------
+def process_file(hdf_file):
+    """Process a single HDF file through full pipeline."""
+    base = os.path.splitext(hdf_file)[0]
+
+    print(f"🚀 Processing {hdf_file}")
+
+    # 1. Convert to Measurement Set
+    run(f"apptainer run ../tart-tools.sif tart2ms --hdf {hdf_file} --single-field --rephase obs-midpoint --ms {base}.ms --clobber")
+
+    # 2. Disko imaging
+    run(f"apptainer run ../tart-tools.sif disko --ms {base}.ms --nvis 10000 --healpix --fov 170deg --res 30arcmin --lasso --alpha 0.005 --HDF {base}.h5")
+
+    # 3. SVG generation
+    run(f"apptainer run ../tart-tools.sif disko_draw --show-sources --SVG {base}.svg {base}.h5")
+
+    # 4. Convert to PNG
+    run(f"rsvg-convert -b white {base}.svg > {base}.png")
+
+    # 5. Cleanup intermediate files (per file)
+    os.remove(hdf_file)
+    os.remove(f"{base}.h5")
+    os.remove(f"{base}.svg")
+    shutil.rmtree(f"{base}.ms")
+
+    print(f"✅ Done {hdf_file}")
+
+    return f"{base}.png"
+
+# -----------------------------
+# MAIN SCRIPT
+# -----------------------------
+if __name__ == "__main__":
+
+    file_name = input("Enter the base name for your files: ").strip()
+
+    work_dir = f"subfolder_{file_name}"
+    os.makedirs(work_dir, exist_ok=True)
+    os.chdir(work_dir)
+
+    print(f"\n📂 Working in folder: {work_dir}")
+
+    print("\nHow would you like to retrieve the data?")
+    print("1. Download recent files")
+    print("2. Pull archive data")
+
+    choice = input("Enter 1 or 2: ").strip()
+
+    # -----------------------------
+    # DOWNLOAD DATA
+    # -----------------------------
+    if choice == "1":
+        duration = int(input("Enter number of recent files: "))
+
+        print(f"\n🚀 Downloading {duration} files...")
+
+        run(f"apptainer run ../tart-tools.sif tart_download_data --vis --api https://api.elec.ac.nz/tart/kenya --n {duration}")
+
+    elif choice == "2":
+        date_part = input("Enter date (YYYY-MM-DD): ").strip()
+        time_part = input("Enter time (HH:MM): ").strip()
+        duration = int(input("Enter duration in minutes: "))
+
+        start_time = f"{date_part}T{time_part}:00+00:00"
+
+        #run(f"apptainer run ../tart-tools.sif tart_get_archive_data --target tart-kenya --name {file_name} --start {start_time} --duration {duration}")
+        #run(f"apptainer run ../tart-tools.sif tart_get_archive_data --target ghana --name {file_name} --start {start_time} --duration {duration}")
+
+        #run(f"apptainer run ../tart-tools.sif tart_get_archive_data --target tart-mu-udm --name {file_name} --start {start_time} --duration {duration}")
+        #run(f"apptainer run ../tart-tools.sif tart_get_archive_data --target za-rhodes --name {file_name} --start {start_time} --duration {duration}")
+        run(f"apptainer run ../tart-tools.sif tart_get_archive_data --target botswana --name {file_name} --start {start_time} --duration {duration}")
+       
+
+
+    else:
+        print("Invalid choice")
+        exit()
+
+    # -----------------------------
+    # FIND HDF FILES
+    # -----------------------------
+    hdf_files = sorted(glob.glob("*.hdf"))
+
+    if not hdf_files:
+        print("❌ No HDF files found")
+        exit()
+
+    print(f"\n🌌 Found {len(hdf_files)} files. Starting PARALLEL processing...")
+
+    # -----------------------------
+    # PARALLEL EXECUTION
+    # -----------------------------
+    max_workers = 2  # adjust depending on CPU
+
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(process_file, f) for f in hdf_files]
+
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                print(f"✔ Output ready: {result}")
+            except Exception as e:
+                print(f"❌ Error: {e}")
+
+    # -----------------------------
+    # BACKGROUND MODEL + TIMELAPSE
+    # -----------------------------
+    png_files = sorted(glob.glob("*.png"))
+
+    if len(png_files) > 1:
+        print("\n🖼️ Creating background model...")
+        run("convert *.png -evaluate-sequence mean background.png")
+
+        print("✂️ Subtracting background...")
+        png_files = [p for p in png_files if p != "background.png"]
+
+        for i, png in enumerate(png_files, start=1):
+            print(f"[{i}/{len(png_files)}] {png}")
+            run(f"convert {png} background.png -compose difference -composite diff_{png}")
+
+        print("\n🎬 Creating timelapse...")
+        run(f"ffmpeg -y -framerate 1 -pattern_type glob -i 'diff_*.png' -c:v libx264 -pix_fmt yuv420p diff_{file_name}.mp4")
+
+        print("🧹 Cleaning diff frames...")
+        for f in glob.glob("diff_*.png"):
+            os.remove(f)
+
+    print("\n🎉 Pipeline complete!")
