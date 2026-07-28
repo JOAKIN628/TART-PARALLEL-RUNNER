@@ -1,2 +1,2 @@
 # TART-PARALLEL-RUNNER
-FINAL YEAR PROJECT
+Parallel automation script for the Transient Array Radio Telescope (TART) data processing workflow.
