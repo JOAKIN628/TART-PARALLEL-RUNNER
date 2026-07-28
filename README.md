@@ -14,8 +14,9 @@ The workflow was designed to reduce manual intervention, improve efficiency, and
 
 The Transient Array Radio Telescope (TART) is an open-source radio interferometer used for radio astronomy research. It provides software tools for retrieving and processing observational data.
 
-As part of my final-year project, I developed a parallel execution script that automates the use of these tools. The script simplifies the workflow by coordinating data retrieval, processing, and visualization tasks, allowing multiple operations to be managed efficiently from a single interface.
+As part of my final-year project, I developed a parallel execution script that automates the use of these tools. This project provides an automated workflow for processing and visualizing data from the Transient Array Radio Telescope (TART). The pipeline integrates existing TART software tools within an Apptainer container environment and automates the execution of multiple processing steps through a custom Python script.
 
+The main script, tart_parallel, simplifies the TART data processing workflow by managing data acquisition, processing, image generation, background subtraction, and visualization tasks. The pipeline uses the official TART tools packaged in a container (tart-tools.sif) and executes them through Apptainer, ensuring a reproducible and consistent software environment.
 ---
 
 ## Features
