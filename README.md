@@ -19,6 +19,13 @@ As part of my final-year project, I developed a parallel execution script that a
 The main script, `tart_parallel`, simplifies the TART data processing workflow by managing data acquisition, processing, image generation, background subtraction, and visualization tasks. The pipeline uses the official TART tools packaged in a container (`tart-tools.sif`) and executes them through Apptainer, ensuring a reproducible and consistent software environment.
 
 ---
+## Environment Setup
+
+The TART processing workflow uses a containerized environment to provide a consistent and reproducible software setup. The required TART software tools are obtained through a Docker image, which is converted into an Apptainer/Singularity image (`tart-tools.sif`) for execution. The container contains the necessary TART tools and dependencies required for data processing.
+
+After preparing the container environment, the `tart_parallel` script is used to automate the processing workflow. The script runs externally and communicates with the TART tools inside the Apptainer container to perform data acquisition, processing, image generation, background subtraction, and visualization tasks. This approach ensures that the processing pipeline can be reproduced across different systems with the required container support.
+
+---
 
 ## Features
 
